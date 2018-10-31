@@ -2,8 +2,8 @@ package pbkdf2
 
 import (
 	"crypto/hmac"
+	"encoding/binary"
 	"hash"
-	"unsafe"
 )
 
 type pbkdf2 struct {
@@ -23,16 +23,15 @@ func (h *pbkdf2) MakeKey(password []byte, salt []byte, iterCount int, dkLen int)
 	l := (dkLen + hLen - 1) / hLen
 	key := make([]byte, 0, l*hLen)
 	U := make([]byte, hLen)
+	// INT (i)
+	inti := make([]byte, 4)
 
 	for i := 1; i <= l; i++ {
 		// U_1 = PRF (P, S || INT (i))
-		p := (*[4]byte)(unsafe.Pointer(&i))
+		binary.BigEndian.PutUint32(inti, uint32(i))
 		prf.Reset()
 		prf.Write(salt)
-		prf.Write(p[3:4])
-		prf.Write(p[2:3])
-		prf.Write(p[1:2])
-		prf.Write(p[0:1])
+		prf.Write(inti)
 		key = prf.Sum(key)
 		T := key[(i-1)*hLen:]
 		copy(U, T)
